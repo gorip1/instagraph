@@ -6,7 +6,7 @@ def upload_multiple_files():
     uploaded_files = st.sidebar.file_uploader("Choose CSV files", type="csv", accept_multiple_files=True)
     tables = {}
     for uploaded_file in uploaded_files:
-        tables[uploaded_file.name] = pd.read_csv(uploaded_file)
+        tables[uploaded_file.name] = pd.read_csv(uploaded_file, sep=";")
     return tables
 
 # Function to create a dynamic pivot table
