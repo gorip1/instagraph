@@ -27,17 +27,22 @@ def create_pivot_table(df):
 def visualize_data(df):
     if df is not None:
         st.sidebar.header("Visualization")
-        chart_type = st.sidebar.selectbox("Select chart type", ["Bar", "Line", "Heatmap"])
+        chart_type = st.sidebar.selectbox("Select chart type", ["Bar", "Line", "Area", "Map"])
 
-        fig, ax = plt.subplots()
         if chart_type == "Bar":
-            df.plot.bar(ax=ax)
+            st.bar_chart(df)
         elif chart_type == "Line":
-            df.plot.line(ax=ax)
-        elif chart_type == "Heatmap":
-            sns.heatmap(df, annot=True, fmt=".1f", cmap="coolwarm", ax=ax)
-        
-        st.pyplot(fig)
+            st.line_chart(df)
+        elif chart_type == "Area":
+            st.area_chart(df)
+        elif chart_type == "Map":
+            st.heat_map(df)
+
+    # Example DataFrame to visualize
+    chart_data = df
+
+    # Visualize the data using the function
+    visualize_data(chart_data)
 
 # Main Streamlit App
 if __name__ == "__main__":
