@@ -3,8 +3,16 @@ import pandas as pd
 from st_supabase_connection import SupabaseConnection, execute_query
 import time
 
-
-
+@st.cache_data(ttl=600, persist=True)
+def fetch_data(search_column, search_query):
+    if search_query:
+        result = execute_query(
+            st_supabase_client.table("OPEN_MEDIC").select("*").ilike(search_column, f"%{search_query}%"), ttl=0
+        )
+    else:
+        result = execute_query(st_supabase_client.table("OPEN_MEDIC").select("*"), ttl=600)
+    
+    return pd.DataFrame(result.data)  
 # Function to create a dynamic pivot table
 def create_pivot_table(df):
     if df is not None:
@@ -21,7 +29,7 @@ def create_pivot_table(df):
         index_cols = st.sidebar.multiselect("Rows", options=df.columns)
         column_cols = st.sidebar.multiselect("Columns", options=df.columns)
         value_col = st.sidebar.selectbox("Values", options=df.columns, key="values")
-        agg_func = st.sidebar.selectbox("Aggregation", ["sum", "mean", "count"], key="aggregation")
+        agg_func = st.sidebar.selectbox("Aggregation", ["mean","sum", "count"], key="aggregation")
 
         # Ensure we have valid selections
         if index_cols and value_col:
@@ -35,25 +43,32 @@ def create_pivot_table(df):
             
             # Render the pivot table in Streamlit
             st.write("### Pivot Table")
+            st.write(len(column_cols))
             st.dataframe(pivot_table, use_container_width=True)
-            return pivot_table
+            return pivot_table, len(index_cols), len(column_cols)
+        else: return None, 0, 0
 
 # Function to visualize pivot table
-def visualize_data(df):
+def visualize_data(df, index_col_count, column_col_count):
     if df is not None:
         st.sidebar.header("Visualization")
-        chart_type = st.sidebar.selectbox("Select chart type", ["Bar", "Line", "Area"],  key="select chart type")
+        if index_col_count <= 1 and column_col_count <= 1:
+            chart_type = st.sidebar.selectbox("Select chart type", ["Bar", "Line", "Area"],  key="select chart type")
 
-        if chart_type == "Bar":
-            horizontal = st.checkbox("Afficher le graphique horizontalement")
-            stack = st.checkbox("Stacker les sous -catégories")
-            st.bar_chart(df, use_container_width=True,  height=600, horizontal=horizontal, stack=stack)
-        elif chart_type == "Line":
-            st.line_chart(df, use_container_width=True, height=600)
-        elif chart_type == "Area":
-            st.area_chart(df, use_container_width=True, height=600)
-
-        
+            if chart_type == "Bar":
+                horizontal = st.checkbox("Afficher le graphique horizontalement")
+                stack = st.checkbox("Stacker les sous -catégories")
+                stack_100 = st.checkbox("Stack 100%")
+                if stack_100 == True:
+                    stack = 'normalize'
+                st.bar_chart(df, use_container_width=True,  height=600, horizontal=horizontal, stack=stack)
+            elif chart_type == "Line":
+                st.line_chart(df, use_container_width=True, height=600)
+            elif chart_type == "Area":
+                st.area_chart(df, use_container_width=True, height=600)
+        else:
+            st.write("Visualization not available: Please select only one Row and one Column.")
+    
 # Main Streamlit App
 if __name__ == "__main__":
     st.title("Instagraph")
@@ -64,18 +79,19 @@ if __name__ == "__main__":
     ttl=None,
     )
 
-    query = execute_query(st_supabase_client.table("OPEN_MEDIC").select("*"), ttl=0)
-    open_medic_table = pd.DataFrame(query.data)
-    st.write(len(open_medic_table))
-    st.sidebar.header("Search Filter")
-    search_column = st.sidebar.selectbox("Select column to search", options=open_medic_table.columns, key="search_column")
-    search_query = st.sidebar.text_input("Enter your search query", key="search_query")
+    st.sidebar.header("Choisissez une classe ATC3")
+    atc3_query = execute_query(
+        st_supabase_client.table("atc3_values").select("*"), ttl=0
+    )
+    atc3_df = pd.DataFrame(atc3_query.data)
+    atc3_values = atc3_df['L_ATC3'].tolist()
+    selected_atc3 = st.sidebar.selectbox("Select ATC3", options=atc3_values, key="selected_atc3")
 
-    # Filter the main DataFrame based on search input
-    if search_query:
-        open_medic_table = open_medic_table[open_medic_table[search_column].astype(str).str.contains(search_query, case=False, na=False)]
-
+    query = fetch_data('L_ATC3', selected_atc3)
+    open_medic_table = pd.DataFrame(query)
     st.dataframe(open_medic_table)
-    pivot_table = create_pivot_table(open_medic_table)
-    visualize_data(pivot_table)
+    st.write("Nombre de lignes :", len(open_medic_table))
+
+    pivot_table, index_col_count, column_col_count = create_pivot_table(open_medic_table)
+    visualize_data(pivot_table, index_col_count, column_col_count)
 
