@@ -1,14 +1,9 @@
 import streamlit as st
 import pandas as pd
 from st_supabase_connection import SupabaseConnection, execute_query
+import time
 
-# Function to upload multiple files
-def upload_multiple_files():
-    uploaded_files = st.sidebar.file_uploader("Choose CSV files", type="csv", accept_multiple_files=True)
-    tables = {}
-    for uploaded_file in uploaded_files:
-        tables[uploaded_file.name] = pd.read_csv(uploaded_file, sep=";", encoding='latin1')
-    return tables
+
 
 # Function to create a dynamic pivot table
 def create_pivot_table(df):
@@ -62,27 +57,25 @@ def visualize_data(df):
 # Main Streamlit App
 if __name__ == "__main__":
     st.title("Instagraph")
-
-    tables = upload_multiple_files()
     
     st_supabase_client = st.connection(
-    name="instagraph",
+    name="public",
     type=SupabaseConnection,
     ttl=None,
     )
-    query = execute_query(st_supabase_client.table("OPEN_MEDIC").select("*"), ttl=10)
-    pabtable = pd.DataFrame(query.data)
-    st.write(query)
-    st.dataframe(pabtable)
 
+    query = execute_query(st_supabase_client.table("OPEN_MEDIC").select("*"), ttl=0)
+    open_medic_table = pd.DataFrame(query.data)
+    st.write(len(open_medic_table))
+    st.sidebar.header("Search Filter")
+    search_column = st.sidebar.selectbox("Select column to search", options=open_medic_table.columns, key="search_column")
+    search_query = st.sidebar.text_input("Enter your search query", key="search_query")
 
-    if tables:
-        table_choice = st.sidebar.selectbox("Select a table", options=tables.keys(),  key="select a table")
+    # Filter the main DataFrame based on search input
+    if search_query:
+        open_medic_table = open_medic_table[open_medic_table[search_column].astype(str).str.contains(search_query, case=False, na=False)]
 
-        if table_choice:
-            current_df = tables[table_choice]
-            st.write(f"Data from {table_choice}")
-            st.dataframe(current_df)
+    st.dataframe(open_medic_table)
+    pivot_table = create_pivot_table(open_medic_table)
+    visualize_data(pivot_table)
 
-            pivot_table = create_pivot_table(current_df)
-            visualize_data(pivot_table)
