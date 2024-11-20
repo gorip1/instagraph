@@ -61,7 +61,7 @@ def visualize_data(df):
         
 # Main Streamlit App
 if __name__ == "__main__":
-    st.title("Interactive Data Exploration App")
+    st.title("Instagraph")
 
     tables = upload_multiple_files()
     
