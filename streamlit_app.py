@@ -4,6 +4,14 @@ from st_supabase_connection import SupabaseConnection, execute_query
 import time
 
 @st.cache_data(persist=True)
+def fetch_atc3():
+    result = execute_query(
+        st_supabase_client.table("atc3_values").select("*"), ttl=0
+    )
+    return pd.DataFrame(result.data)
+
+
+@st.cache_data(persist=True)
 def fetch_data(atc3_value):
     result = execute_query(
         st_supabase_client.table("OPEN_MEDIC").select("*").ilike('L_ATC3', f"%{atc3_value}%")
@@ -76,10 +84,7 @@ if __name__ == "__main__":
     )
 
     st.sidebar.header("Choisissez une classe ATC3")
-    atc3_query = execute_query(
-        st_supabase_client.table("atc3_values").select("*"), ttl=0
-    )
-    atc3_df = pd.DataFrame(atc3_query.data)
+    atc3_df = fetch_atc3()
     atc3_values = atc3_df['L_ATC3'].tolist()
     selected_atc3 = st.sidebar.selectbox("Select ATC3", index=None ,options=atc3_values, key="selected_atc3")
     
