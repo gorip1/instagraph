@@ -71,7 +71,7 @@ def visualize_data(df, index_col_count, column_col_count):
     
 # Main Streamlit App
 if __name__ == "__main__":
-    st.title("Instagraph")
+    st.title("💊 Instagraph")
     
     st_supabase_client = st.connection(
     name="public",
@@ -85,13 +85,16 @@ if __name__ == "__main__":
     )
     atc3_df = pd.DataFrame(atc3_query.data)
     atc3_values = atc3_df['L_ATC3'].tolist()
-    selected_atc3 = st.sidebar.selectbox("Select ATC3", options=atc3_values, key="selected_atc3")
+    selected_atc3 = st.sidebar.selectbox("Select ATC3", index=None ,options=atc3_values, key="selected_atc3")
+    
+    if selected_atc3:
+        st.header(selected_atc3)
+        query = fetch_data('L_ATC3', selected_atc3)
+        open_medic_table = pd.DataFrame(query)
+        
+        st.dataframe(open_medic_table)
+        st.write("Nombre de lignes :", len(open_medic_table))
 
-    query = fetch_data('L_ATC3', selected_atc3)
-    open_medic_table = pd.DataFrame(query)
-    st.dataframe(open_medic_table)
-    st.write("Nombre de lignes :", len(open_medic_table))
-
-    pivot_table, index_col_count, column_col_count = create_pivot_table(open_medic_table)
-    visualize_data(pivot_table, index_col_count, column_col_count)
+        pivot_table, index_col_count, column_col_count = create_pivot_table(open_medic_table)
+        visualize_data(pivot_table, index_col_count, column_col_count)
 
