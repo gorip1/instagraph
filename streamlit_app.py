@@ -28,7 +28,7 @@ def create_pivot_table(df):
         # Select pivot fields
         index_cols = st.sidebar.multiselect("Rows", options=df.columns)
         column_cols = st.sidebar.multiselect("Columns", options=df.columns)
-        value_col = st.sidebar.selectbox("Values", options=df.columns, key="values")
+        value_col = st.sidebar.selectbox("Values", options=df.columns, index=21, key="values")
         agg_func = st.sidebar.selectbox("Aggregation", ["mean","sum", "count"], key="aggregation")
 
         # Ensure we have valid selections
