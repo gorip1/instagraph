@@ -3,16 +3,12 @@ import pandas as pd
 from st_supabase_connection import SupabaseConnection, execute_query
 import time
 
-@st.cache_data(ttl=600, persist=True)
-def fetch_data(search_column, search_query):
-    if search_query:
-        result = execute_query(
-            st_supabase_client.table("OPEN_MEDIC").select("*").ilike(search_column, f"%{search_query}%"), ttl=0
-        )
-    else:
-        result = execute_query(st_supabase_client.table("OPEN_MEDIC").select("*"), ttl=600)
-    
-    return pd.DataFrame(result.data)  
+@st.cache_data(persist=True)
+def fetch_data(atc3_value):
+    result = execute_query(
+        st_supabase_client.table("OPEN_MEDIC").select("*").ilike('L_ATC3', f"%{atc3_value}%")
+    )
+    return pd.DataFrame(result.data)   
 # Function to create a dynamic pivot table
 def create_pivot_table(df):
     if df is not None:
@@ -26,7 +22,7 @@ def create_pivot_table(df):
                 df = df[df[filter_col].isin(filter_vals)]
         
         # Select pivot fields
-        index_cols = st.sidebar.multiselect("Rows", options=df.columns)
+        index_cols = st.sidebar.multiselect("Rows", options=df.columns, default='L_ATC5')
         column_cols = st.sidebar.multiselect("Columns", options=df.columns)
         value_col = st.sidebar.selectbox("Values", options=df.columns, index=21, key="values")
         agg_func = st.sidebar.selectbox("Aggregation", ["mean","sum", "count"], key="aggregation")
@@ -42,8 +38,7 @@ def create_pivot_table(df):
             )
             
             # Render the pivot table in Streamlit
-            st.write("### Pivot Table")
-            st.write(len(column_cols))
+            st.write("### Tableau croisé dynamique")
             st.dataframe(pivot_table, use_container_width=True)
             return pivot_table, len(index_cols), len(column_cols)
         else: return None, 0, 0
@@ -51,6 +46,7 @@ def create_pivot_table(df):
 # Function to visualize pivot table
 def visualize_data(df, index_col_count, column_col_count):
     if df is not None:
+        st.write("### Figure")
         st.sidebar.header("Visualization")
         if index_col_count <= 1 and column_col_count <= 1:
             chart_type = st.sidebar.selectbox("Select chart type", ["Bar", "Line", "Area"],  key="select chart type")
@@ -89,11 +85,13 @@ if __name__ == "__main__":
     
     if selected_atc3:
         st.header(selected_atc3)
-        query = fetch_data('L_ATC3', selected_atc3)
-        open_medic_table = pd.DataFrame(query)
+        open_medic_table = fetch_data(selected_atc3)
         
-        st.dataframe(open_medic_table)
-        st.write("Nombre de lignes :", len(open_medic_table))
+        st.dataframe(open_medic_table, height=200)
+        if len(open_medic_table) == 200000:
+            st.write(f"Nombre de lignes : {len(open_medic_table)} - Attention, dataset incomplet, seuls les 200000 premières lignes sont prises en compte")
+        else:
+            st.write(f"Nombre de lignes : {len(open_medic_table)}")
 
         pivot_table, index_col_count, column_col_count = create_pivot_table(open_medic_table)
         visualize_data(pivot_table, index_col_count, column_col_count)
