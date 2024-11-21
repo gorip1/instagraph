@@ -3,6 +3,9 @@ import pandas as pd
 from st_supabase_connection import SupabaseConnection, execute_query
 import time
 
+allowed_values = ["Nombre de boîtes délivrées", "Montant Remboursé", "Base de Remboursement"]
+allowed_col_index = ["Tranche d’Age du Bénéficiaire","Sexe du Bénéficiaire", "Région de Résidence du Bénéficiaire", "Prescripteur", "Année", "Libellé ATC4", "Libellé ATC5", "Code CIP 13", "Libellé CIP 13"]
+
 @st.cache_data(persist=True)
 def fetch_atc3():
     result = execute_query(
@@ -14,27 +17,33 @@ def fetch_atc3():
 @st.cache_data(persist=True)
 def fetch_data(atc3_value):
     result = execute_query(
-        st_supabase_client.table("OPEN_MEDIC").select("*").ilike('L_ATC3', f"%{atc3_value}%")
+        st_supabase_client.table("test10").select("*").ilike('Libellé ATC3', f"%{atc3_value}%")
     )
     return pd.DataFrame(result.data)   
 # Function to create a dynamic pivot table
 def create_pivot_table(df):
     if df is not None:
-        st.sidebar.header("Dynamic Pivot Table")
-
-        filter_col = st.sidebar.selectbox("Filter Column", options=["None"] + df.columns.tolist(), key="filter_col")
-        if filter_col != "None":
+        st.sidebar.header("☕️ Filtre")
+        filter_col = st.sidebar.selectbox("Créer un filtre (optionnel)", options=df.columns.tolist(), placeholder="Choisir une colonne...", index=None, key="filter_col")
+        if filter_col:
             unique_vals = df[filter_col].unique().tolist()
-            filter_vals = st.sidebar.multiselect("Filter Values", options=unique_vals, key="filter_vals")
+            filter_vals = st.sidebar.multiselect("Filtrer sur... (choix multiple)", options=unique_vals, key="filter_vals")
             if filter_vals:
                 df = df[df[filter_col].isin(filter_vals)]
-        
-        # Select pivot fields
-        index_cols = st.sidebar.multiselect("Rows", options=df.columns, default='L_ATC5')
-        column_cols = st.sidebar.multiselect("Columns", options=df.columns)
-        value_col = st.sidebar.selectbox("Values", options=df.columns, index=21, key="values")
-        agg_func = st.sidebar.selectbox("Aggregation", ["mean","sum", "count"], key="aggregation")
 
+        st.sidebar.header("🧨 Tableau croisé dynamique")
+        # Select pivot fields
+        index_cols = st.sidebar.multiselect("Lignes", options=allowed_col_index, default='Libellé ATC5')
+        column_cols = st.sidebar.multiselect("Colonnes", options=allowed_col_index)
+        value_col = st.sidebar.selectbox("Valeurs", options=allowed_values, key="values")
+        agg_func = st.sidebar.selectbox("Calcul par...", ["Moyenne","Somme", "Nombre"], key="aggregation")
+        agg_func_mapping = {
+            "Moyenne": "mean",
+            "Somme": "sum",
+            "Nombre": "count"
+        }
+
+        agg_func = agg_func_mapping.get(agg_func, "mean") 
         # Ensure we have valid selections
         if index_cols and value_col:
             pivot_table = df.pivot_table(
@@ -55,14 +64,14 @@ def create_pivot_table(df):
 def visualize_data(df, index_col_count, column_col_count):
     if df is not None:
         st.write("### Figure")
-        st.sidebar.header("Visualization")
+        st.sidebar.header("📊 Graphique")
         if index_col_count <= 1 and column_col_count <= 1:
             chart_type = st.sidebar.selectbox("Select chart type", ["Bar", "Line", "Area"],  key="select chart type")
 
             if chart_type == "Bar":
-                horizontal = st.checkbox("Afficher le graphique horizontalement")
-                stack = st.checkbox("Stacker les sous -catégories")
-                stack_100 = st.checkbox("Stack 100%")
+                horizontal = st.sidebar.checkbox("Afficher le graphique horizontalement")
+                stack = st.sidebar.checkbox("Stacker les sous -catégories")
+                stack_100 = st.sidebar.checkbox("Stack 100%")
                 if stack_100 == True:
                     stack = 'normalize'
                 st.bar_chart(df, use_container_width=True,  height=600, horizontal=horizontal, stack=stack)
@@ -75,7 +84,8 @@ def visualize_data(df, index_col_count, column_col_count):
     
 # Main Streamlit App
 if __name__ == "__main__":
-    st.title("💊 Instagraph")
+    st.title("💊 Easy Open Medic")
+    st.markdown("_Les bases open medic sont complexes à utiliser, ce site est destiner à vous faciliter la tache ;)_")
     
     st_supabase_client = st.connection(
     name="public",
@@ -83,10 +93,10 @@ if __name__ == "__main__":
     ttl=None,
     )
 
-    st.sidebar.header("Choisissez une classe ATC3")
+    st.sidebar.header("✨")
     atc3_df = fetch_atc3()
     atc3_values = atc3_df['L_ATC3'].tolist()
-    selected_atc3 = st.sidebar.selectbox("Select ATC3", index=None ,options=atc3_values, key="selected_atc3")
+    selected_atc3 = st.sidebar.selectbox("Commençons par choisir une classe ATC3 🤓", index=None ,options=atc3_values, key="selected_atc3", placeholder="selectionnez une classe ATC3...")
     
     if selected_atc3:
         st.header(selected_atc3)
