@@ -36,14 +36,14 @@ def create_pivot_table(df):
         index_cols = st.sidebar.multiselect("Lignes", options=allowed_col_index, default='Libellé ATC5')
         column_cols = st.sidebar.multiselect("Colonnes", options=allowed_col_index)
         value_col = st.sidebar.selectbox("Valeurs", options=allowed_values, key="values")
-        agg_func = st.sidebar.selectbox("Calcul par...", ["Moyenne","Somme", "Nombre"], key="aggregation")
+        agg_func_fr = st.sidebar.selectbox("Calcul par...", ["Moyenne","Somme", "Nombre"], key="aggregation")
         agg_func_mapping = {
             "Moyenne": "mean",
             "Somme": "sum",
             "Nombre": "count"
         }
 
-        agg_func = agg_func_mapping.get(agg_func, "mean") 
+        agg_func = agg_func_mapping.get(agg_func_fr, "mean") 
         # Ensure we have valid selections
         if index_cols and value_col:
             pivot_table = df.pivot_table(
@@ -57,11 +57,11 @@ def create_pivot_table(df):
             # Render the pivot table in Streamlit
             st.write("### Tableau croisé dynamique")
             st.dataframe(pivot_table, use_container_width=True)
-            return pivot_table, len(index_cols), len(column_cols)
+            return pivot_table, len(index_cols), len(column_cols), agg_func_fr, value_col, index_cols
         else: return None, 0, 0
 
 # Function to visualize pivot table
-def visualize_data(df, index_col_count, column_col_count):
+def visualize_data(df, index_col_count, column_col_count , agg_func_fr, value_col, index_cols):
     if df is not None:
         st.write("### Figure")
         st.sidebar.header("📊 Graphique")
@@ -74,7 +74,7 @@ def visualize_data(df, index_col_count, column_col_count):
                 stack_100 = st.sidebar.checkbox("Stack 100%")
                 if stack_100 == True:
                     stack = 'normalize'
-                st.bar_chart(df, use_container_width=True,  height=600, horizontal=horizontal, stack=stack)
+                st.bar_chart(df, use_container_width=True,  height=600, horizontal=horizontal, stack=stack, y_label={agg_func_fr + " de : " + value_col}, x_label={index_cols[0]})
             elif chart_type == "Line":
                 st.line_chart(df, use_container_width=True, height=600)
             elif chart_type == "Area":
@@ -108,6 +108,6 @@ if __name__ == "__main__":
         else:
             st.write(f"Nombre de lignes : {len(open_medic_table)}")
 
-        pivot_table, index_col_count, column_col_count = create_pivot_table(open_medic_table)
-        visualize_data(pivot_table, index_col_count, column_col_count)
+        pivot_table, index_col_count, column_col_count, agg_func_fr, value_col, index_cols = create_pivot_table(open_medic_table)
+        visualize_data(pivot_table, index_col_count, column_col_count, agg_func_fr , value_col, index_cols)
 
