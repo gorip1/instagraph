@@ -33,8 +33,8 @@ def create_pivot_table(df):
 
         st.sidebar.header("🧨 Tableau croisé dynamique")
         # Select pivot fields
-        index_cols = st.sidebar.multiselect("Lignes", options=allowed_col_index, default='Libellé ATC5')
-        column_cols = st.sidebar.multiselect("Colonnes", options=allowed_col_index)
+        index_cols = st.sidebar.multiselect("Lignes", options=allowed_col_index, default='Libellé ATC5', placeholder="Choisir une ligne...")
+        column_cols = st.sidebar.multiselect("Colonnes", options=allowed_col_index, placeholder="Choisir une colonne...")
         value_col = st.sidebar.selectbox("Valeurs", options=allowed_values, key="values")
         agg_func_fr = st.sidebar.selectbox("Calcul par...", ["Moyenne","Somme", "Nombre"], key="aggregation")
         agg_func_mapping = {
@@ -85,7 +85,7 @@ def visualize_data(df, index_col_count, column_col_count , agg_func_fr, value_co
 # Main Streamlit App
 if __name__ == "__main__":
     st.title("💊 Easy Open Medic")
-    st.markdown("_Les bases open medic sont complexes à utiliser, ce site est destiner à vous faciliter la tache ;)_")
+    st.markdown("_Les bases open medic sont complexes à utiliser, ce site est destiné à vous faciliter la tache ;)_")
     
     st_supabase_client = st.connection(
     name="public",
