@@ -74,7 +74,7 @@ def visualize_data(df, index_col_count, column_col_count , agg_func_fr, value_co
                 stack_100 = st.sidebar.checkbox("Stack 100%")
                 if stack_100 == True:
                     stack = 'normalize'
-                st.bar_chart(df, use_container_width=True,  height=600, horizontal=horizontal, stack=stack, y_label={agg_func_fr + " de : " + value_col}, x_label={index_cols[0]})
+                st.bar_chart(df, use_container_width=True,  height=600, horizontal=horizontal, stack=stack, y_label={index_cols[0]} if horizontal else {agg_func_fr + " de : " + value_col}, x_label={agg_func_fr + " de : " + value_col} if horizontal else {index_cols[0]})
             elif chart_type == "Line":
                 st.line_chart(df, use_container_width=True, height=600)
             elif chart_type == "Area":
