@@ -5,8 +5,11 @@ import altair as alt
 
 allowed_values = ["Montant Remboursé", "Nombre de boîtes délivrées", "Base de Remboursement"]
 allowed_col_index = ["Tranche d’Age du Bénéficiaire","Sexe du Bénéficiaire", "Région de Résidence du Bénéficiaire", "Prescripteur", "Année", "Libellé ATC4", "Libellé ATC5", "Code CIP 13", "Libellé CIP 13"]
-
+all_years = [2021, 2022, 2023]
+selected_atc3 = None
+selected_atc3_label = None
 ### GET DB FUNCTIONS
+
 
 @st.cache_data(persist=True)
 def fetch_atc3():
@@ -25,7 +28,7 @@ def fetch_atc5():
 @st.cache_data(persist=True)
 def fetch_drug_atc3(atc5):
     result = execute_query(
-        st_supabase_client.table("test11")
+        st_supabase_client.table("test12")
         .select("Code ATC3", "Libellé ATC3")
         .eq("Code ATC5", atc5)
         .limit(1)
@@ -35,7 +38,7 @@ def fetch_drug_atc3(atc5):
 @st.cache_data(persist=True)
 def fetch_data(column, value):
     result = execute_query(
-        st_supabase_client.table("test11").select("*").ilike(column, f"%{value}%")
+        st_supabase_client.table("test12").select("*").ilike(column, f"%{value}%")
     )
     return pd.DataFrame(result.data)   
 
@@ -44,12 +47,26 @@ def fetch_data(column, value):
 
 def create_pivot_table(df):
     if df is not None:
-        st.sidebar.header("☕️ Filtre")
-        filter_col = st.sidebar.selectbox("Créer un filtre (optionnel)", options=df.columns.tolist(), placeholder="Choisir une colonne...", index=None, key="filter_col")
-        if filter_col:
-            unique_vals = df[filter_col].unique().tolist()
-            filter_vals = st.sidebar.multiselect("Filtrer sur... (choix multiple)", options=unique_vals, key="filter_vals")
-            if filter_vals:
+        st.sidebar.header("☕️ Filtres")
+
+        selected_years = st.sidebar.multiselect(
+            "Sélectionner les années",
+            options=list(all_years),
+            default=all_years)
+        
+        df = df[df["Année"].isin(selected_years)]
+
+        def apply_filter(filter_index):
+            filter_col = st.sidebar.selectbox(f"Filtre {filter_index}", options=df.columns.tolist(), placeholder="Choisir une colonne...", key=f"filter_col_{filter_index}", index=None)
+            if filter_col:
+                unique_vals = df[filter_col].unique().tolist()
+                filter_vals = st.sidebar.multiselect("  ____👉 Filtrer sur... (choix multiple)", options=unique_vals, key=f"filter_vals_{filter_index}")
+                return (filter_col, filter_vals)
+            return (None, None)
+
+        for i in range(1, 4):
+            filter_col, filter_vals = apply_filter(i)
+            if filter_col and filter_vals:
                 df = df[df[filter_col].isin(filter_vals)]
 
         st.sidebar.header("🧨 Tableau croisé dynamique")
@@ -74,7 +91,7 @@ def create_pivot_table(df):
             )
             
             # Render the pivot table in Streamlit
-            st.write("### Tableau croisé dynamique")
+            st.subheader(":blue[Tableau croisé dynamique:]")
             st.dataframe(pivot_table, use_container_width=True)
             return pivot_table, len(index_cols), len(column_cols), agg_func_fr, value_col, index_cols
         else: return None, 0, 0, None, 0, 0
@@ -84,15 +101,16 @@ def create_pivot_table(df):
 
 def visualize_data(df, index_col_count, column_col_count , agg_func_fr, value_col, index_cols):
     if df is not None:
-        st.write("### Figure")
-        st.sidebar.header("📊 Graphique")
+        st.divider()
+        st.subheader(":blue[Figure:]")
         if index_col_count <= 1 and column_col_count <= 1:
-            chart_type = st.sidebar.selectbox("Select chart type", ["Bar", "Line", "Area"],  key="select chart type")
-
+            chart_type = st.selectbox("Selectionner le type de graphique...", ["Bar", "Line", "Area"],  key="select chart type")
+            st.write("")
             if chart_type == "Bar":
-                horizontal = st.sidebar.checkbox("Afficher le graphique horizontalement")
-                stack = st.sidebar.checkbox("Stacker les sous-catégories")
-                stack_100 = st.sidebar.checkbox("Stack 100%")
+                horizontal = st.checkbox("Afficher le graphique horizontalement")
+                stack = st.checkbox("Stacker les sous-catégories")
+                stack_100 = st.checkbox("Stack 100%")
+                st.write(" ")
                 if stack_100 == True:
                     stack = 'normalize'
                 st.bar_chart(df, 
@@ -140,11 +158,12 @@ if __name__ == "__main__":
     atc5_df = fetch_atc5()
     atc5_display_values = atc5_df['L_ATC5'].tolist()
     selected_display_value = st.selectbox(
-        "Choisir un médicament", 
+        label="", 
         options=atc5_display_values, 
         placeholder="Choisir un médicament (DCI)",
         index=None
     )
+
     selected_value_df = atc5_df.loc[atc5_df['L_ATC5'] == selected_display_value, 'ATC5']
     if not selected_value_df.empty:
         selected_atc5 = selected_value_df.iat[0]
@@ -156,10 +175,10 @@ if __name__ == "__main__":
         atc3_display_values = atc3_df['L_ATC3'].tolist()
         st.write("Ou...")
         selected_display_value_atc3 = st.selectbox(
-            "Choisir une classe ATC3 🤓", 
+            label="", 
             options=atc3_display_values,
             key="selected_atc3", 
-            placeholder="Selectionnez une classe ATC3...",
+            placeholder="Selectionner une classe ATC3 🤓...",
             index=None
         )
         selected_value_df_atc3 = atc3_df.loc[atc3_df['L_ATC3'] == selected_display_value_atc3, 'ATC3']
@@ -171,26 +190,30 @@ if __name__ == "__main__":
             selected_atc3_label = None
 
     if selected_atc5:
-        drug_atc3_df = fetch_drug_atc3(selected_atc5)
-        if not drug_atc3_df.empty:
-            selected_atc3_label = drug_atc3_df.iloc[0]['Libellé ATC3']
-            selected_atc3 = drug_atc3_df.iloc[0]['Code ATC3']
-        else:
-            selected_atc3_label = None
-            selected_atc3 = None
-
+        st.header(selected_display_value)
+        fetch_column = 'Code ATC5'
+        fetch_value = selected_atc5
+        
     if selected_atc3:
         st.header(selected_atc3_label)
-        open_medic_table = fetch_data('Code ATC3', selected_atc3)
-        
-        st.dataframe(open_medic_table, height=200)
+        fetch_column = 'Code ATC3'
+        fetch_value = selected_atc3
+
+    st.divider()
+
+    if selected_atc5 or selected_atc3:    
+        open_medic_table = fetch_data(fetch_column, fetch_value)   
+        st.subheader(":blue[Tableau de données brutes:]") 
+        st.dataframe(open_medic_table, height=100)
         if len(open_medic_table) == 200000:
-            st.write(f"Nombre de lignes : {len(open_medic_table)} - Attention, dataset incomplet, seuls les 200000 premières lignes sont prises en compte")
+            st.write(f"_Nombre de lignes : {len(open_medic_table)} - Attention, dataset incomplet, seuls les 200000 premières lignes sont prises en compte_")
         else:
-            st.write(f"Nombre de lignes : {len(open_medic_table)}")
+            st.write(f"_Nombre de lignes : {len(open_medic_table)}_")
+        st.divider()
 
         pivot_table, index_col_count, column_col_count, agg_func_fr, value_col, index_cols = create_pivot_table(open_medic_table)
         visualize_data(pivot_table, index_col_count, column_col_count, agg_func_fr , value_col, index_cols)
-    if selected_atc3 == None:
+        
+    if selected_atc3 == None and selected_atc5 == None:
         st.info("_Les temps de chargement peuvent être un peu long, mais toujours moins longs que 10 millions de lignes sur excel 💚_")
 
