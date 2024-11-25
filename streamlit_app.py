@@ -107,25 +107,25 @@ def visualize_data(df, index_col_count, column_col_count , agg_func_fr, value_co
                 st.line_chart(df, 
                               use_container_width=True, 
                               height=600,
-                              y_label={index_cols[0]} if horizontal else {agg_func_fr + " de : " + value_col}, 
-                              x_label={agg_func_fr + " de : " + value_col} if horizontal else {index_cols[0]}
+                              y_label={agg_func_fr + " de : " + value_col}, 
+                              x_label={index_cols[0]}
                               )
             elif chart_type == "Area":
                 st.area_chart(df, 
                               use_container_width=True, 
                               height=600,
-                              y_label={index_cols[0]} if horizontal else {agg_func_fr + " de : " + value_col}, 
-                              x_label={agg_func_fr + " de : " + value_col} if horizontal else {index_cols[0]}
+                              y_label={agg_func_fr + " de : " + value_col}, 
+                              x_label={index_cols[0]}
                               )
         else:
-            st.markdown("_La représentation graphique est disponible avec 2 dimensions._\n\n_Selectionnez seulement une ligne et une colonne_")
+            st.warning("_La représentation graphique est disponible avec 2 dimensions._\n\n_Selectionnez seulement une ligne et une colonne_")
     elif index_col_count == 0:
         st.write("")
-        st.markdown("_Veuillez choisir au moins une ligne pour afficher le tableau croisé et un graphique_")
+        st.warning("_Veuillez choisir au moins une ligne pour afficher le tableau croisé et un graphique_")
 # Main Streamlit App
 if __name__ == "__main__":
     st.title("💊 Easy Open Medic")
-    st.markdown("_Les bases open medic sont complexes à utiliser, ce site est destiné à vous faciliter la tache ;)_\n\n_Les données Open Medic présentent *l’ensemble des prescriptions de médicaments délivrés en officine de ville*, que le prescripteur soit libéral ou salarié (prescriptions hospitalières principalement)._")
+    st.success("_Les bases open medic sont complexes à utiliser, ce site est destiné à vous faciliter la tache ;)_\n\n_Les données Open Medic présentent *l’ensemble des prescriptions de médicaments délivrés en officine de ville* en France, que le prescripteur soit libéral ou salarié (prescriptions hospitalières principalement)._")
     
     st_supabase_client = st.connection(
     name="public",
@@ -191,4 +191,6 @@ if __name__ == "__main__":
 
         pivot_table, index_col_count, column_col_count, agg_func_fr, value_col, index_cols = create_pivot_table(open_medic_table)
         visualize_data(pivot_table, index_col_count, column_col_count, agg_func_fr , value_col, index_cols)
+    if selected_atc3 == None:
+        st.info("_Les temps de chargement peuvent être un peu long, mais toujours moins longs que 10 millions de lignes sur excel 💚_")
 
